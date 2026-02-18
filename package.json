@@ -1,0 +1,19 @@
+{
+  "name": "nip-admin-inbox",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone Netlify admin inbox for Supabase contact messages.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "netlify dev",
+    "start": "netlify dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1"
+  },
+  "devDependencies": {
+    "netlify-cli": "^18.0.0"
+  }
+}

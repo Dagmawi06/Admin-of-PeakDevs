@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NIP Inbox (New Innovation Pioneers)</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div>
+        <h1>NIP Inbox (New Innovation Pioneers)</h1>
+        <p class="subtitle">Admin-only contact message viewer</p>
+      </div>
+      <div class="header-actions">
+        <button id="exportBtn" class="btn btn-secondary" disabled>Export CSV</button>
+        <button id="logoutBtn" class="btn btn-ghost" disabled>Logout</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="controls card">
+        <div class="control-group search-group">
+          <label for="searchInput">Search</label>
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Search name, email, or message..."
+            autocomplete="off"
+            disabled
+          />
+        </div>
+        <div class="control-group">
+          <label for="rangeSelect">Date range</label>
+          <select id="rangeSelect" disabled>
+            <option value="1d">Last 24h</option>
+            <option value="7d" selected>Last 7d</option>
+            <option value="30d">Last 30d</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+      </section>
+
+      <section id="errorBanner" class="error-banner hidden" role="alert"></section>
+
+      <section class="card data-card">
+        <div id="loadingState" class="state hidden">
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Loading messages...</p>
+        </div>
+
+        <div id="emptyState" class="state hidden">
+          <p>No messages found for current filters.</p>
+        </div>
+
+        <div class="table-wrap desktop-only">
+          <table>
+            <thead>
+              <tr>
+                <th>Created</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Message</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="messagesTableBody"></tbody>
+          </table>
+        </div>
+
+        <div id="messagesCards" class="mobile-only cards"></div>
+
+        <div class="footer-actions">
+          <button id="loadMoreBtn" class="btn btn-secondary hidden" disabled>Load more</button>
+        </div>
+      </section>
+    </main>
+
+    <div id="loginModal" class="modal-overlay open" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <div class="modal">
+        <h2 id="loginTitle">Admin Login</h2>
+        <p class="muted">Enter Basic Auth credentials for NIP Inbox.</p>
+        <form id="loginForm">
+          <label for="usernameInput">Username</label>
+          <input id="usernameInput" type="text" required autocomplete="username" />
+          <label for="passwordInput">Password</label>
+          <input id="passwordInput" type="password" required autocomplete="current-password" />
+          <div id="loginError" class="form-error hidden"></div>
+          <button type="submit" class="btn btn-primary">Sign in</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="messageModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="messageTitle">
+      <div class="modal modal-wide">
+        <div class="modal-header">
+          <h2 id="messageTitle">Message details</h2>
+          <button id="closeMessageModalBtn" class="btn btn-ghost">Close</button>
+        </div>
+        <div id="messageModalContent"></div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        const state = {
+          authToken: null,
+          messages: [],
+          limit: 50,
+          offset: 0,
+          nextOffset: null,
+          loading: false,
+          query: "",
+          range: "7d",
+        };
+
+        const el = {
+          loginModal: document.getElementById("loginModal"),
+          loginForm: document.getElementById("loginForm"),
+          loginError: document.getElementById("loginError"),
+          usernameInput: document.getElementById("usernameInput"),
+          passwordInput: document.getElementById("passwordInput"),
+          searchInput: document.getElementById("searchInput"),
+          rangeSelect: document.getElementById("rangeSelect"),
+          exportBtn: document.getElementById("exportBtn"),
+          logoutBtn: document.getElementById("logoutBtn"),
+          errorBanner: document.getElementById("errorBanner"),
+          loadingState: document.getElementById("loadingState"),
+          emptyState: document.getElementById("emptyState"),
+          tableBody: document.getElementById("messagesTableBody"),
+          cards: document.getElementById("messagesCards"),
+          loadMoreBtn: document.getElementById("loadMoreBtn"),
+          messageModal: document.getElementById("messageModal"),
+          messageModalContent: document.getElementById("messageModalContent"),
+          closeMessageModalBtn: document.getElementById("closeMessageModalBtn"),
+          toast: document.getElementById("toast"),
+        };
+
+        function escapeHtml(value) {
+          return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        function truncate(value, maxLen) {
+          const str = String(value ?? "");
+          if (str.length <= maxLen) return str;
+          return str.slice(0, maxLen - 3) + "...";
+        }
+
+        function formatDate(iso) {
+          try {
+            return new Date(iso).toLocaleString();
+          } catch (_e) {
+            return iso || "-";
+          }
+        }
+
+        function setError(message) {
+          if (!message) {
+            el.errorBanner.classList.add("hidden");
+            el.errorBanner.textContent = "";
+            return;
+          }
+          el.errorBanner.textContent = message;
+          el.errorBanner.classList.remove("hidden");
+        }
+
+        function setLoading(isLoading) {
+          state.loading = isLoading;
+          el.loadingState.classList.toggle("hidden", !isLoading);
+          el.loadMoreBtn.disabled = isLoading;
+        }
+
+        function setAuthedUI(enabled) {
+          el.searchInput.disabled = !enabled;
+          el.rangeSelect.disabled = !enabled;
+          el.exportBtn.disabled = !enabled;
+          el.logoutBtn.disabled = !enabled;
+          el.loadMoreBtn.disabled = !enabled;
+        }
+
+        function showToast(message, isError = false) {
+          el.toast.textContent = message;
+          el.toast.classList.remove("hidden");
+          el.toast.classList.toggle("error", isError);
+          window.clearTimeout(showToast._timer);
+          showToast._timer = window.setTimeout(() => {
+            el.toast.classList.add("hidden");
+          }, 2200);
+        }
+
+        async function apiFetch(path, opts = {}) {
+          const headers = new Headers(opts.headers || {});
+          if (!state.authToken) throw new Error("Not authenticated.");
+          headers.set("Authorization", "Basic " + state.authToken);
+          if (!headers.has("Content-Type") && opts.method && opts.method !== "GET") {
+            headers.set("Content-Type", "application/json");
+          }
+
+          const res = await fetch(path, { ...opts, headers });
+          if (res.status === 401) {
+            logout();
+            throw new Error("Authentication failed. Please sign in again.");
+          }
+          return res;
+        }
+
+        function render() {
+          el.tableBody.innerHTML = "";
+          el.cards.innerHTML = "";
+          el.emptyState.classList.toggle("hidden", state.messages.length !== 0 || state.loading);
+
+          for (const msg of state.messages) {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${escapeHtml(formatDate(msg.created_at))}</td>
+              <td>${escapeHtml(msg.name || "-")}</td>
+              <td>${escapeHtml(msg.email || "-")}</td>
+              <td title="${escapeHtml(msg.message || "")}">${escapeHtml(truncate(msg.message || "-", 100))}</td>
+              <td class="actions">
+                <button class="btn btn-small btn-secondary view-btn" data-id="${escapeHtml(msg.id)}">View</button>
+                <button class="btn btn-small btn-ghost copy-btn" data-email="${escapeHtml(msg.email || "")}">Copy Email</button>
+                <button class="btn btn-small btn-danger delete-btn" data-id="${escapeHtml(msg.id)}">Delete</button>
+              </td>
+            `;
+            el.tableBody.appendChild(row);
+
+            const card = document.createElement("article");
+            card.className = "message-card";
+            card.innerHTML = `
+              <div class="message-card-top">
+                <strong>${escapeHtml(msg.name || "-")}</strong>
+                <span>${escapeHtml(formatDate(msg.created_at))}</span>
+              </div>
+              <div class="message-card-email">${escapeHtml(msg.email || "-")}</div>
+              <p>${escapeHtml(truncate(msg.message || "-", 160))}</p>
+              <div class="actions">
+                <button class="btn btn-small btn-secondary view-btn" data-id="${escapeHtml(msg.id)}">View</button>
+                <button class="btn btn-small btn-ghost copy-btn" data-email="${escapeHtml(msg.email || "")}">Copy Email</button>
+                <button class="btn btn-small btn-danger delete-btn" data-id="${escapeHtml(msg.id)}">Delete</button>
+              </div>
+            `;
+            el.cards.appendChild(card);
+          }
+
+          const hasMore = state.nextOffset !== null;
+          el.loadMoreBtn.classList.toggle("hidden", !hasMore);
+          el.loadMoreBtn.disabled = state.loading || !hasMore;
+        }
+
+        function openMessageModal(message) {
+          el.messageModalContent.innerHTML = `
+            <div class="details-grid">
+              <div><strong>ID:</strong><br>${escapeHtml(message.id || "-")}</div>
+              <div><strong>Created:</strong><br>${escapeHtml(formatDate(message.created_at))}</div>
+              <div><strong>Name:</strong><br>${escapeHtml(message.name || "-")}</div>
+              <div><strong>Email:</strong><br>${escapeHtml(message.email || "-")}</div>
+              <div><strong>Page URL:</strong><br>${escapeHtml(message.page_url || "-")}</div>
+              <div><strong>IP:</strong><br>${escapeHtml(message.ip || "-")}</div>
+              <div class="full-width"><strong>User Agent:</strong><br>${escapeHtml(message.user_agent || "-")}</div>
+              <div class="full-width"><strong>Message:</strong><pre>${escapeHtml(message.message || "-")}</pre></div>
+            </div>
+          `;
+          el.messageModal.classList.add("open");
+        }
+
+        function closeMessageModal() {
+          el.messageModal.classList.remove("open");
+        }
+
+        async function loadMessages(reset = false) {
+          if (!state.authToken || state.loading) return;
+          if (reset) {
+            state.messages = [];
+            state.offset = 0;
+            state.nextOffset = null;
+            render();
+          }
+
+          setError("");
+          setLoading(true);
+          try {
+            const params = new URLSearchParams({
+              limit: String(state.limit),
+              offset: String(reset ? 0 : state.offset),
+              range: state.range,
+            });
+            if (state.query.trim()) params.set("q", state.query.trim());
+
+            const res = await apiFetch("/.netlify/functions/messages?" + params.toString());
+            const payload = await res.json();
+            if (!res.ok || !payload.ok) {
+              throw new Error(payload.error || "Failed to load messages.");
+            }
+
+            if (reset) {
+              state.messages = payload.data || [];
+            } else {
+              state.messages = state.messages.concat(payload.data || []);
+            }
+            state.nextOffset = payload.nextOffset;
+            state.offset = payload.nextOffset ?? state.messages.length;
+            render();
+          } catch (err) {
+            setError(err.message || "Unexpected error while loading messages.");
+          } finally {
+            setLoading(false);
+          }
+        }
+
+        async function deleteMessage(id) {
+          if (!window.confirm("Delete this message permanently?")) return;
+          try {
+            const res = await apiFetch("/.netlify/functions/message-delete?id=" + encodeURIComponent(id), {
+              method: "DELETE",
+            });
+            const payload = await res.json();
+            if (!res.ok || !payload.ok) throw new Error(payload.error || "Delete failed.");
+            state.messages = state.messages.filter((m) => m.id !== id);
+            render();
+            showToast("Message deleted.");
+          } catch (err) {
+            showToast(err.message || "Failed to delete.", true);
+          }
+        }
+
+        async function copyEmail(email) {
+          if (!email) {
+            showToast("No email available.", true);
+            return;
+          }
+          try {
+            await navigator.clipboard.writeText(email);
+            showToast("Email copied.");
+          } catch (_err) {
+            showToast("Clipboard write failed.", true);
+          }
+        }
+
+        async function exportCsv() {
+          try {
+            const params = new URLSearchParams({ range: state.range });
+            if (state.query.trim()) params.set("q", state.query.trim());
+            const res = await apiFetch("/.netlify/functions/export-csv?" + params.toString());
+            if (!res.ok) {
+              let err = "Export failed.";
+              try {
+                const payload = await res.json();
+                err = payload.error || err;
+              } catch (_e) {}
+              throw new Error(err);
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "nip-contact-messages.csv";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            showToast("CSV export started.");
+          } catch (err) {
+            showToast(err.message || "Export failed.", true);
+          }
+        }
+
+        function logout() {
+          state.authToken = null;
+          state.messages = [];
+          state.offset = 0;
+          state.nextOffset = null;
+          setAuthedUI(false);
+          render();
+          setError("");
+          el.loginError.classList.add("hidden");
+          el.loginModal.classList.add("open");
+        }
+
+        function bindEvents() {
+          el.loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = el.usernameInput.value.trim();
+            const password = el.passwordInput.value;
+            if (!username || !password) return;
+
+            state.authToken = btoa(username + ":" + password);
+            try {
+              const testRes = await apiFetch("/.netlify/functions/messages?limit=1&offset=0&range=7d");
+              if (!testRes.ok) {
+                let message = "Login failed.";
+                try {
+                  const data = await testRes.json();
+                  message = data.error || message;
+                } catch (_e) {}
+                throw new Error(message);
+              }
+
+              el.loginModal.classList.remove("open");
+              el.usernameInput.value = "";
+              el.passwordInput.value = "";
+              el.loginError.classList.add("hidden");
+              setAuthedUI(true);
+              await loadMessages(true);
+            } catch (err) {
+              state.authToken = null;
+              el.loginError.textContent = err.message || "Invalid credentials.";
+              el.loginError.classList.remove("hidden");
+            }
+          });
+
+          let searchDebounce;
+          el.searchInput.addEventListener("input", () => {
+            window.clearTimeout(searchDebounce);
+            searchDebounce = window.setTimeout(() => {
+              state.query = el.searchInput.value;
+              loadMessages(true);
+            }, 250);
+          });
+
+          el.rangeSelect.addEventListener("change", () => {
+            state.range = el.rangeSelect.value;
+            loadMessages(true);
+          });
+
+          el.loadMoreBtn.addEventListener("click", async () => {
+            if (state.nextOffset === null) return;
+            state.offset = state.nextOffset;
+            await loadMessages(false);
+          });
+
+          el.exportBtn.addEventListener("click", exportCsv);
+          el.logoutBtn.addEventListener("click", logout);
+
+          document.addEventListener("click", (e) => {
+            const target = e.target;
+            if (!(target instanceof HTMLElement)) return;
+
+            const viewBtn = target.closest(".view-btn");
+            if (viewBtn) {
+              const id = viewBtn.getAttribute("data-id");
+              const msg = state.messages.find((m) => m.id === id);
+              if (msg) openMessageModal(msg);
+              return;
+            }
+
+            const copyBtn = target.closest(".copy-btn");
+            if (copyBtn) {
+              const email = copyBtn.getAttribute("data-email");
+              copyEmail(email || "");
+              return;
+            }
+
+            const deleteBtn = target.closest(".delete-btn");
+            if (deleteBtn) {
+              const id = deleteBtn.getAttribute("data-id");
+              if (id) deleteMessage(id);
+            }
+          });
+
+          el.closeMessageModalBtn.addEventListener("click", closeMessageModal);
+          el.messageModal.addEventListener("click", (e) => {
+            if (e.target === el.messageModal) closeMessageModal();
+          });
+          document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") closeMessageModal();
+          });
+        }
+
+        bindEvents();
+        setAuthedUI(false);
+        render();
+      })();
+    </script>
+  </body>
+</html>
