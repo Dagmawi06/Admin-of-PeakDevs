@@ -59,7 +59,7 @@ h1 {
   padding: 14px;
   display: grid;
   gap: 12px;
-  grid-template-columns: 1fr 180px;
+  grid-template-columns: minmax(0, 1fr) 180px auto;
 }
 
 .control-group {
@@ -255,8 +255,10 @@ td {
 }
 
 .modal {
-  width: 100%;
-  max-width: 420px;
+  width: min(92vw, 420px);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border-radius: 14px;
   border: 1px solid var(--border);
@@ -265,7 +267,7 @@ td {
 }
 
 .modal-wide {
-  max-width: 760px;
+  width: min(92vw, 720px);
 }
 
 .modal-header {
@@ -273,6 +275,18 @@ td {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ecf0f4;
+}
+
+.modal-body {
+  overflow-y: auto;
+  padding-top: 12px;
+  min-height: 0;
 }
 
 .muted {
@@ -299,6 +313,18 @@ form {
   gap: 14px;
   grid-template-columns: 1fr 1fr;
   margin-top: 10px;
+  min-width: 0;
+}
+
+.details-grid > div {
+  min-width: 0;
+}
+
+.meta-value {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .details-grid pre {
@@ -308,6 +334,15 @@ form {
   border: 1px solid #dce4ee;
   border-radius: 10px;
   padding: 10px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.message-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .full-width {
@@ -361,6 +396,10 @@ form {
   .controls {
     grid-template-columns: 1fr;
   }
+
+  .controls-actions {
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 760px) {
@@ -379,5 +418,13 @@ form {
 
   .header-actions {
     justify-content: flex-start;
+  }
+
+  .modal {
+    padding: 14px;
+  }
+
+  .details-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -39,6 +39,10 @@
             <option value="all">All</option>
           </select>
         </div>
+        <div class="control-group controls-actions">
+          <label>&nbsp;</label>
+          <button id="refreshBtn" class="btn btn-secondary" disabled>Refresh</button>
+        </div>
       </section>
 
       <section id="errorBanner" class="error-banner hidden" role="alert"></section>
@@ -97,7 +101,9 @@
           <h2 id="messageTitle">Message details</h2>
           <button id="closeMessageModalBtn" class="btn btn-ghost">Close</button>
         </div>
-        <div id="messageModalContent"></div>
+        <div class="modal-body">
+          <div id="messageModalContent"></div>
+        </div>
       </div>
     </div>
 
@@ -128,6 +134,7 @@
           rangeSelect: document.getElementById("rangeSelect"),
           exportBtn: document.getElementById("exportBtn"),
           logoutBtn: document.getElementById("logoutBtn"),
+          refreshBtn: document.getElementById("refreshBtn"),
           errorBanner: document.getElementById("errorBanner"),
           loadingState: document.getElementById("loadingState"),
           emptyState: document.getElementById("emptyState"),
@@ -177,6 +184,11 @@
           state.loading = isLoading;
           el.loadingState.classList.toggle("hidden", !isLoading);
           el.loadMoreBtn.disabled = isLoading;
+          if (!state.authToken) {
+            el.refreshBtn.disabled = true;
+          } else if (el.refreshBtn.textContent !== "Refreshing...") {
+            el.refreshBtn.disabled = isLoading;
+          }
         }
 
         function setAuthedUI(enabled) {
@@ -185,6 +197,7 @@
           el.exportBtn.disabled = !enabled;
           el.logoutBtn.disabled = !enabled;
           el.loadMoreBtn.disabled = !enabled;
+          el.refreshBtn.disabled = !enabled;
         }
 
         function showToast(message, isError = false) {
@@ -261,12 +274,12 @@
             <div class="details-grid">
               <div><strong>ID:</strong><br>${escapeHtml(message.id || "-")}</div>
               <div><strong>Created:</strong><br>${escapeHtml(formatDate(message.created_at))}</div>
-              <div><strong>Name:</strong><br>${escapeHtml(message.name || "-")}</div>
-              <div><strong>Email:</strong><br>${escapeHtml(message.email || "-")}</div>
-              <div><strong>Page URL:</strong><br>${escapeHtml(message.page_url || "-")}</div>
-              <div><strong>IP:</strong><br>${escapeHtml(message.ip || "-")}</div>
-              <div class="full-width"><strong>User Agent:</strong><br>${escapeHtml(message.user_agent || "-")}</div>
-              <div class="full-width"><strong>Message:</strong><pre>${escapeHtml(message.message || "-")}</pre></div>
+              <div><strong>Name:</strong><br><span class="meta-value">${escapeHtml(message.name || "-")}</span></div>
+              <div><strong>Email:</strong><br><span class="meta-value">${escapeHtml(message.email || "-")}</span></div>
+              <div><strong>Page URL:</strong><br><span class="meta-value">${escapeHtml(message.page_url || "-")}</span></div>
+              <div><strong>IP:</strong><br><span class="meta-value">${escapeHtml(message.ip || "-")}</span></div>
+              <div class="full-width"><strong>User Agent:</strong><br><span class="meta-value">${escapeHtml(message.user_agent || "-")}</span></div>
+              <div class="full-width"><strong>Message:</strong><pre class="message-text">${escapeHtml(message.message || "-")}</pre></div>
             </div>
           `;
           el.messageModal.classList.add("open");
@@ -309,11 +322,24 @@
             state.nextOffset = payload.nextOffset;
             state.offset = payload.nextOffset ?? state.messages.length;
             render();
+            return true;
           } catch (err) {
             setError(err.message || "Unexpected error while loading messages.");
+            return false;
           } finally {
             setLoading(false);
           }
+        }
+
+        async function refreshMessages() {
+          if (!state.authToken || state.loading) return;
+          const originalLabel = "Refresh";
+          el.refreshBtn.textContent = "Refreshing...";
+          el.refreshBtn.disabled = true;
+          const ok = await loadMessages(true);
+          el.refreshBtn.textContent = originalLabel;
+          el.refreshBtn.disabled = state.loading || !state.authToken;
+          if (ok) showToast("Fetched latest messages.");
         }
 
         async function deleteMessage(id) {
@@ -438,6 +464,7 @@
             await loadMessages(false);
           });
 
+          el.refreshBtn.addEventListener("click", refreshMessages);
           el.exportBtn.addEventListener("click", exportCsv);
           el.logoutBtn.addEventListener("click", logout);
 
