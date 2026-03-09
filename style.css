@@ -10,7 +10,9 @@
   --accent-strong: #003b99;
   --danger: #b43838;
   --shadow: 0 8px 24px rgba(9, 30, 66, 0.08);
+  --shadow-hover: 0 12px 32px rgba(9, 30, 66, 0.12);
   --radius: 12px;
+  --radius-sm: 8px;
 }
 
 * {
@@ -19,7 +21,8 @@
 
 body {
   margin: 0;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
   background: linear-gradient(180deg, #f0f4f8 0%, #d9e2ec 100%);
   color: var(--text);
 }
@@ -36,12 +39,16 @@ body {
 
 h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
 }
 
 .subtitle {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 400;
 }
 
 .container {
@@ -55,6 +62,11 @@ h1 {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-hover);
 }
 
 .controls {
@@ -94,7 +106,7 @@ select {
 input:focus-visible,
 select:focus-visible,
 button:focus-visible {
-  outline: 3px solid rgba(12, 122, 109, 0.25);
+  outline: 3px solid rgba(0, 82, 204, 0.25);
   outline-offset: 2px;
 }
 
@@ -160,45 +172,53 @@ td {
 .btn-primary {
   background: var(--accent);
   color: #fff;
+  font-weight: 500;
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-strong);
+  box-shadow: var(--shadow);
 }
 
 .btn-secondary {
-  background: #ecf4f3;
-  color: #0a5f56;
-  border-color: #c8dbd8;
+  background: #f0f4ff;
+  color: #003b99;
+  border-color: #c8d4f0;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #deecea;
+  background: #e0e8ff;
+  box-shadow: var(--shadow);
 }
 
 .btn-ghost {
   background: #fff;
   border-color: var(--border);
   color: var(--text);
+  font-weight: 500;
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: #f5f8fa;
+  background: #f8fafc;
+  box-shadow: var(--shadow);
 }
 
 .btn-danger {
   background: #fff1f1;
   border-color: #efcaca;
   color: var(--danger);
+  font-weight: 500;
 }
 
 .btn-danger:hover:not(:disabled) {
   background: #ffe8e8;
+  box-shadow: var(--shadow);
 }
 
 .btn-small {
   padding: 6px 9px;
   font-size: 0.85rem;
+  border-radius: var(--radius-sm);
 }
 
 .hidden {
