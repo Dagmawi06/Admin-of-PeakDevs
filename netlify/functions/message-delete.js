@@ -17,7 +17,7 @@ function unauthorized() {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-      "WWW-Authenticate": 'Basic realm="NIP Inbox"',
+      "WWW-Authenticate": 'Basic realm="SDS Inbox"',
     },
     body: JSON.stringify({ ok: false, error: "Unauthorized" }),
   };

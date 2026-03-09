@@ -17,7 +17,7 @@ function unauthorized() {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
-      "WWW-Authenticate": 'Basic realm="NIP Inbox"',
+      "WWW-Authenticate": 'Basic realm="SDS Inbox"',
     },
     body: JSON.stringify({ ok: false, error: "Unauthorized" }),
   };
@@ -147,7 +147,7 @@ exports.handler = async (event) => {
       statusCode: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": 'attachment; filename="nip-contact-messages.csv"',
+        "Content-Disposition": 'attachment; filename="sds-contact-messages.csv"',
         "Cache-Control": "no-store",
       },
       body: lines.join("\n"),

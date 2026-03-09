@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NIP Inbox (New Innovation Pioneers)</title>
+    <title>SDS Inbox (Sentry Digital Solutions)</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <header class="site-header">
       <div>
-        <h1>NIP Inbox (New Innovation Pioneers)</h1>
+        <h1>SDS Inbox (Sentry Digital Solutions)</h1>
         <p class="subtitle">Admin-only contact message viewer</p>
       </div>
       <div class="header-actions">
@@ -83,7 +83,7 @@
     <div id="loginModal" class="modal-overlay open" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
       <div class="modal">
         <h2 id="loginTitle">Admin Login</h2>
-        <p class="muted">Enter Basic Auth credentials for NIP Inbox.</p>
+        <p class="muted">Enter Basic Auth credentials for SDS Inbox.</p>
         <form id="loginForm">
           <label for="usernameInput">Username</label>
           <input id="usernameInput" type="text" required autocomplete="username" />
@@ -389,7 +389,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = "nip-contact-messages.csv";
+            a.download = "sds-contact-messages.csv";
             document.body.appendChild(a);
             a.click();
             a.remove();

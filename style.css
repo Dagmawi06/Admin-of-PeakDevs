@@ -1,11 +1,13 @@
 :root {
+  /* neutral background + surface remain light for readability */
   --bg: #f4f6f8;
   --surface: #ffffff;
   --text: #142233;
   --muted: #617182;
   --border: #d6dde5;
-  --accent: #0c7a6d;
-  --accent-strong: #085f55;
+  /* updated accent palette to a more corporate blue tone */
+  --accent: #0052cc;
+  --accent-strong: #003b99;
   --danger: #b43838;
   --shadow: 0 8px 24px rgba(9, 30, 66, 0.08);
   --radius: 12px;
@@ -18,7 +20,7 @@
 body {
   margin: 0;
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2f6 100%);
+  background: linear-gradient(180deg, #f0f4f8 0%, #d9e2ec 100%);
   color: var(--text);
 }
 

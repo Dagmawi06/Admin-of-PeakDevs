@@ -1,4 +1,4 @@
-# NIP Admin Inbox
+# SDS Admin Inbox
 
 Standalone Netlify mini-site for securely viewing and managing `public.contact_messages` from Supabase.
 
