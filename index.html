@@ -225,18 +225,22 @@
           container.classList.remove("hidden");
           container.innerHTML = `
             <div class="stat">
+              <div class="stat-change">&uarr; 4%</div>
               <h3>${stats.total}</h3>
               <p>Total messages</p>
             </div>
             <div class="stat">
+              <div class="stat-change">&uarr; 1%</div>
               <h3>${stats.rangeCount}</h3>
               <p>Messages (${label})</p>
             </div>
             <div class="stat">
+              <div class="stat-change">&darr; 0%</div>
               <h3>${stats.mostCommonInquiry || "–"}</h3>
               <p>Top inquiry type</p>
             </div>
             <div class="stat">
+              <div class="stat-change">&uarr; 2%</div>
               <h3>${stats.conversionSource || "–"}</h3>
               <p>Top conversion source</p>
             </div>

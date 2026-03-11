@@ -417,23 +417,38 @@ form {
 }
 
 .analytics .stat {
-  background: var(--bg);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px 16px;
   text-align: center;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
 }
+
+/* colored card backgrounds (first four) */
+.analytics .stat:nth-child(1) { background: var(--accent); }
+.analytics .stat:nth-child(2) { background: var(--danger); }
+.analytics .stat:nth-child(3) { background: var(--success); }
+.analytics .stat:nth-child(4) { background: var(--accent-strong); }
 
 .analytics .stat h3 {
   margin: 0;
-  font-size: 1.5rem;
-  color: var(--accent-strong);
+  font-size: 1.75rem;
+  font-weight: 700;
 }
 
 .analytics .stat p {
-  margin: 0;
+  margin: 4px 0 0;
   font-size: 0.875rem;
-  color: var(--muted);
+  opacity: 0.85;
+}
+
+.analytics .stat .stat-change {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 0.75rem;
+  opacity: 0.7;
 }
 
 .cards {
