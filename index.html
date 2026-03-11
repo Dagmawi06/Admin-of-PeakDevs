@@ -243,6 +243,30 @@
           `;
         }
 
+        // fetch aggregated stats from server
+        async function loadStats() {
+          if (!state.authToken) {
+            console.debug("loadStats: skipping because not authenticated");
+            return;
+          }
+          try {
+            console.debug("loadStats: requesting analytics for range", state.range);
+            const params = new URLSearchParams({ range: state.range });
+            const res = await apiFetch("/.netlify/functions/analytics?" + params.toString());
+            console.debug("loadStats: response status", res.status);
+            const payload = await res.json();
+            console.debug("loadStats: payload", payload);
+            if (!res.ok || !payload.ok) {
+              throw new Error(payload.error || "Failed to load stats.");
+            }
+            state.stats = payload.stats;
+            renderAnalytics();
+          } catch (err) {
+            console.error("loadStats error", err);
+            setError(err.message || "Unexpected error while loading analytics.");
+          }
+        }
+
         function showToast(message, isError = false) {
           el.toast.textContent = message;
           el.toast.classList.remove("hidden");
@@ -554,9 +578,7 @@
         bindEvents();
         setAuthedUI(false);
         render();
-        // temporary: show analytics with dummy data for testing
-        state.stats = { total: 0, rangeCount: 0, mostCommonInquiry: null, conversionSource: null };
-        renderAnalytics();
+        // stats will be fetched after login success or manual refresh
       })();
     </script>
   </body>
