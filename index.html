@@ -554,7 +554,9 @@
         bindEvents();
         setAuthedUI(false);
         render();
-        // stats will be fetched after login success or manual refresh
+        // temporary: show analytics with dummy data for testing
+        state.stats = { total: 0, rangeCount: 0, mostCommonInquiry: null, conversionSource: null };
+        renderAnalytics();
       })();
     </script>
   </body>
