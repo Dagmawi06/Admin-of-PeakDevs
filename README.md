@@ -67,6 +67,9 @@ Set these in Netlify Site settings (and locally for `netlify dev`):
 - `GET /.netlify/functions/export-csv?range=7d&q=term`
   - Auth required
   - Returns downloadable CSV
+- `GET /.netlify/functions/analytics?range=1d|7d|30d|all`
+  - Auth required
+  - Returns aggregated stats for total messages, count within the given range (defaults to `all`), plus top inquiry type / conversion source
 
 ## Notes
 

@@ -19,6 +19,9 @@
     </header>
 
     <main class="container">
+      <!-- analytics summary cards -->
+      <section id="analytics" class="card analytics hidden"></section>
+
       <section class="controls card">
         <div class="control-group search-group">
           <label for="searchInput">Search</label>
@@ -114,7 +117,7 @@
         "use strict";
 
         const state = {
-          authToken: null,
+            authToken: null,
           messages: [],
           limit: 50,
           offset: 0,
@@ -122,6 +125,7 @@
           loading: false,
           query: "",
           range: "7d",
+          stats: null, // analytics data
         };
 
         const el = {
@@ -198,6 +202,45 @@
           el.logoutBtn.disabled = !enabled;
           el.loadMoreBtn.disabled = !enabled;
           el.refreshBtn.disabled = !enabled;
+        }
+
+        // human-readable labels for the range selector
+        const rangeLabels = {
+          "1d": "last 24 hours",
+          "7d": "last 7 days",
+          "30d": "last 30 days",
+          all: "all time",
+        };
+
+        function renderAnalytics() {
+          const container = document.getElementById("analytics");
+          if (!state.stats) {
+            container.classList.add("hidden");
+            return;
+          }
+
+          const stats = state.stats;
+          const label = rangeLabels[state.range] || state.range;
+
+          container.classList.remove("hidden");
+          container.innerHTML = `
+            <div class="stat">
+              <h3>${stats.total}</h3>
+              <p>Total messages</p>
+            </div>
+            <div class="stat">
+              <h3>${stats.rangeCount}</h3>
+              <p>Messages (${label})</p>
+            </div>
+            <div class="stat">
+              <h3>${stats.mostCommonInquiry || "–"}</h3>
+              <p>Top inquiry type</p>
+            </div>
+            <div class="stat">
+              <h3>${stats.conversionSource || "–"}</h3>
+              <p>Top conversion source</p>
+            </div>
+          `;
         }
 
         function showToast(message, isError = false) {
@@ -337,9 +380,12 @@
           el.refreshBtn.textContent = "Refreshing...";
           el.refreshBtn.disabled = true;
           const ok = await loadMessages(true);
+          if (ok) {
+            await loadStats();
+            showToast("Fetched latest messages.");
+          }
           el.refreshBtn.textContent = originalLabel;
           el.refreshBtn.disabled = state.loading || !state.authToken;
-          if (ok) showToast("Fetched latest messages.");
         }
 
         async function deleteMessage(id) {
@@ -437,6 +483,7 @@
               el.loginError.classList.add("hidden");
               setAuthedUI(true);
               await loadMessages(true);
+              await loadStats();
             } catch (err) {
               state.authToken = null;
               el.loginError.textContent = err.message || "Invalid credentials.";
@@ -456,6 +503,7 @@
           el.rangeSelect.addEventListener("change", () => {
             state.range = el.rangeSelect.value;
             loadMessages(true);
+            loadStats();
           });
 
           el.loadMoreBtn.addEventListener("click", async () => {
@@ -506,6 +554,7 @@
         bindEvents();
         setAuthedUI(false);
         render();
+        // stats will be fetched after login success or manual refresh
       })();
     </script>
   </body>
